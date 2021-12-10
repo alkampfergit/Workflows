@@ -1,0 +1,35 @@
+name: continuous_deployment
+on:
+  workflow_call:
+    inputs:
+      coverage_info_dir:
+        required: true
+        type: string
+    secrets:
+      NUGET_API_KEY:
+        required: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: build and publish
+        env:
+          AZURE_CLIENT_ID:  ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET:  ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID:  ${{ secrets.AZURE_TENANT_ID }}
+        shell: powershell
+        run: |
+          dotnet tool restore
+          ./build.ps1 -nugetPublish $true -nugetApiKey ${{ secrets.NUGET_API_KEY }}
+
+      - name: Publish coverage report to coveralls.io
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ inputs.coverage_info_dir }}
